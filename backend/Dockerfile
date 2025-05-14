@@ -1,33 +1,28 @@
-# Stage 1 - Builder
-FROM node:20-alpine as builder
+# Etapa 1: Build
+FROM node:20-alpine AS builder
 
-ENV NODE_ENV=build
+WORKDIR /app
 
-WORKDIR /portifolio/backend/app
+# Copia os pacotes do backend e core
+COPY ./backend/package*.json ./backend/tsconfig*.json ./
+COPY ./core ./core
+COPY ./backend ./backend
 
-# Copy package files first for better caching
-COPY --chown=node:node package*.json ./
-RUN npm ci
+# Instala as dependências (inclusive para monorepo ou refs locais)
+RUN npm install
 
-# Copy remaining files
-COPY --chown=node:node . .
+# Compila o projeto
+RUN npm run build
 
-# Build application
-RUN npx prisma generate && npm run build
-
-# Stage 2 - Production
+# Etapa 2: Runtime
 FROM node:20-alpine
 
-ENV NODE_ENV=production
-EXPOSE 4001
+WORKDIR /app
 
-WORKDIR /home/gasa/portifolio/backend
+# Copia apenas os arquivos compilados e necessários
+COPY --from=builder /app/backend/dist ./dist
+COPY --from=builder /app/backend/package*.json ./
 
-COPY --from=builder --chown=node:node /home/gasa/portifolio/backend/node_modules ./node_modules
-COPY --from=builder --chown=node:node /home/gasa/portifolio/backend/dist ./dist
-COPY --from=builder --chown=node:node /home/gasa/portifolio/backend/package*.json ./
+RUN npm install --only=production
 
-HEALTHCHECK --interval=30s --timeout=3s \
-    CMD curl -f http://localhost:3000/api/health || exit 1
-
-CMD ["node", "dist/backend/src/main.js"]
+CMD ["node", "dist/backend/src/main"]
