@@ -33,7 +33,7 @@ COPY --from=builder /portifolio/app/backend/node_modules/.prisma ./node_modules/
 COPY --from=builder /portifolio/app/backend/prisma ./prisma
 
 # ⬇️ Copia o arquivo .env do backend
-COPY backend/.env .env
+# COPY backend/.env .env
 
 RUN npm install --only=production
 
