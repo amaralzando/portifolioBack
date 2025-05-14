@@ -1,17 +1,17 @@
 # Etapa 1: Build
 FROM node:20-alpine AS builder
 
-WORKDIR /portifolio/app
+WORKDIR /portifolio
 
-# Copia pacotes e tsconfig
-COPY backend/package*.json backend/tsconfig*.json ./backend/
+# Copia pacotes e tsconfig do backend
+COPY app/package*.json app/tsconfig*.json ./app/
 
-# Copia o código
+# Copia o código-fonte
 COPY core ./core
-COPY backend ./backend
+COPY app ./app
 
 # Instala dependências do backend
-WORKDIR /portifolio/app/backend
+WORKDIR /portifolio/app
 RUN npm install
 
 # Gera os arquivos do Prisma Client
@@ -23,22 +23,20 @@ RUN npm run build
 # Etapa 2: Runtime
 FROM node:20-alpine
 
-WORKDIR /app
+WORKDIR /portifolio/app
 
 # Copia os arquivos compilados e necessários
-COPY --from=builder /portifolio/app/backend/dist ./dist
-COPY --from=builder /portifolio/app/backend/package*.json ./
-COPY --from=builder /portifolio/app/backend/node_modules ./node_modules
-COPY --from=builder /portifolio/app/backend/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /portifolio/app/backend/prisma ./prisma
+COPY --from=builder /portifolio/app/dist ./dist
+COPY --from=builder /portifolio/app/package*.json ./
+COPY --from=builder /portifolio/app/node_modules ./node_modules
+COPY --from=builder /portifolio/app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /portifolio/app/prisma ./prisma
 
-# ⬇️ Copia o arquivo .env do backend
-# COPY backend/.env .env
+# (Opcional) Copiar o .env se necessário
+# COPY app/.env .env
 
 RUN npm install --only=production
 
-# ⬅️ Porta corrigida para garantir o funcionamento com Coolify ou Docker local
 ENV PORT=4001
 
-# Executa a aplicação NestJS
 CMD ["node", "dist/backend/src/main"]
